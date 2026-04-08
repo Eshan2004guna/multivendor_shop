@@ -62,6 +62,11 @@ $role = $_SESSION["role"] ?? "";
                     <h3 class="text-2xl font-bold mb-2">Manage Products</h3>
                     <p>View and manage your product list.</p>
                 </a>
+
+                <a href="seller/orders.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:scale-105 transition">
+                    <h3 class="text-2xl font-bold mb-2">View Orders</h3>
+                    <p>See orders for your products.</p>
+                </a>
             <?php } ?>
 
             <?php if ($role === "customer") { ?>
@@ -79,6 +84,11 @@ $role = $_SESSION["role"] ?? "";
                     <h3 class="text-2xl font-bold mb-2">Checkout</h3>
                     <p>Place your order quickly and easily.</p>
                 </a>
+
+                <a href="customer/orders.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:scale-105 transition">
+                    <h3 class="text-2xl font-bold mb-2">My Orders</h3>
+                    <p>View your previous orders.</p>
+                </a>
             <?php } ?>
 
             <?php if ($role === "admin") { ?>
@@ -95,6 +105,11 @@ $role = $_SESSION["role"] ?? "";
                 <a href="admin/manage_products.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-slate-600 to-slate-800 hover:scale-105 transition">
                     <h3 class="text-2xl font-bold mb-2">Manage Products</h3>
                     <p>Manage all available products.</p>
+                </a>
+
+                <a href="admin/manage_orders.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:scale-105 transition">
+                    <h3 class="text-2xl font-bold mb-2">Manage Orders</h3>
+                    <p>View all customer orders and update status.</p>
                 </a>
             <?php } ?>
 
