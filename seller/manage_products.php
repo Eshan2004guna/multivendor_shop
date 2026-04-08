@@ -71,11 +71,9 @@ $products = $stmt->get_result();
                             <td class="p-3"><?php echo htmlspecialchars($row["product_name"]); ?></td>
                             <td class="p-3">Rs. <?php echo number_format($row["price"], 2); ?></td>
                             <td class="p-3"><?php echo $row["stock"]; ?></td>
-                            <td class="p-3">
-                                <a href="?delete=<?php echo $row["id"]; ?>" onclick="return confirm('Delete this product?')"
-                                   class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600">
-                                   Delete
-                                </a>
+                            <td class="p-3 flex gap-2">
+                                <a href="edit_product.php?id=<?php echo $row["id"]; ?>" class="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600">Edit</a>
+                                <a href="?delete=<?php echo $row["id"]; ?>" onclick="return confirm('Delete this product?')" class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600">Delete</a>
                             </td>
                         </tr>
                     <?php } ?>
