@@ -11,6 +11,23 @@ if (!isset($_GET["id"])) {
 
 $product_id = intval($_GET["id"]);
 
+if (isset($_GET["wishlist"])) {
+    $checkWish = $conn->prepare("SELECT id FROM wishlist WHERE customer_id = ? AND product_id = ?");
+    $checkWish->bind_param("ii", $customer_id, $product_id);
+    $checkWish->execute();
+    $wishResult = $checkWish->get_result();
+
+    if ($wishResult->num_rows == 0) {
+        $insertWish = $conn->prepare("INSERT INTO wishlist (customer_id, product_id) VALUES (?, ?)");
+        $insertWish->bind_param("ii", $customer_id, $product_id);
+        $insertWish->execute();
+        echo "<script>alert('Added to wishlist'); window.location.href='product_details.php?id=$product_id';</script>";
+    } else {
+        echo "<script>alert('Already in wishlist'); window.location.href='product_details.php?id=$product_id';</script>";
+    }
+    exit();
+}
+
 if (isset($_GET["add_to_cart"])) {
     $check = $conn->prepare("SELECT id, quantity FROM cart WHERE customer_id = ? AND product_id = ?");
     $check->bind_param("ii", $customer_id, $product_id);
@@ -96,6 +113,10 @@ $product = $result->fetch_assoc();
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="?id=<?php echo $product["id"]; ?>&wishlist=<?php echo $product["id"]; ?>" class="bg-pink-500 text-white px-6 py-3 rounded-xl font-bold text-center">
+                        Add to Wishlist
+                    </a>
+
                     <?php if ($product["stock"] > 0) { ?>
                         <a href="?id=<?php echo $product["id"]; ?>&add_to_cart=<?php echo $product["id"]; ?>" class="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-bold text-center">
                             Add to Cart
@@ -107,7 +128,7 @@ $product = $result->fetch_assoc();
                     <?php } ?>
 
                     <a href="products.php" class="bg-slate-700 text-white px-6 py-3 rounded-xl font-bold text-center">
-                        Back to Products
+                        Back
                     </a>
                 </div>
             </div>
