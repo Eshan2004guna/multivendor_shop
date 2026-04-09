@@ -5,6 +5,25 @@ require_once "../db.php";
 $customer_id = $_SESSION["user_id"];
 $search = trim($_GET["search"] ?? "");
 
+if (isset($_GET["wishlist"])) {
+    $product_id = intval($_GET["wishlist"]);
+
+    $checkWish = $conn->prepare("SELECT id FROM wishlist WHERE customer_id = ? AND product_id = ?");
+    $checkWish->bind_param("ii", $customer_id, $product_id);
+    $checkWish->execute();
+    $wishResult = $checkWish->get_result();
+
+    if ($wishResult->num_rows == 0) {
+        $insertWish = $conn->prepare("INSERT INTO wishlist (customer_id, product_id) VALUES (?, ?)");
+        $insertWish->bind_param("ii", $customer_id, $product_id);
+        $insertWish->execute();
+        echo "<script>alert('Added to wishlist'); window.location.href='products.php';</script>";
+    } else {
+        echo "<script>alert('Already in wishlist'); window.location.href='products.php';</script>";
+    }
+    exit();
+}
+
 if (isset($_GET["add_to_cart"])) {
     $product_id = intval($_GET["add_to_cart"]);
 
@@ -73,8 +92,11 @@ if ($search !== "") {
         <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
             <h1 class="text-3xl font-extrabold text-blue-700">All Products</h1>
 
-            <div class="flex gap-3">
-                <a href="cart.php" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-5 py-2 rounded-xl font-bold">
+            <div class="flex gap-3 flex-wrap">
+                <a href="wishlist.php" class="bg-pink-500 text-white px-5 py-2 rounded-xl font-bold">
+                    Wishlist
+                </a>
+                <a href="cart.php" class="bg-purple-600 text-white px-5 py-2 rounded-xl font-bold">
                     My Cart
                 </a>
                 <a href="../main.php" class="bg-slate-700 text-white px-5 py-2 rounded-xl font-bold">
@@ -110,22 +132,26 @@ if ($search !== "") {
                         <?php } ?>
 
                         <h2 class="text-xl font-bold"><?php echo htmlspecialchars($row["product_name"]); ?></h2>
-                        <p class="text-slate-600 mt-2 line-clamp-2"><?php echo htmlspecialchars($row["description"]); ?></p>
+                        <p class="text-slate-600 mt-2"><?php echo htmlspecialchars($row["description"]); ?></p>
                         <p class="mt-2 font-semibold text-green-700">Rs. <?php echo number_format($row["price"], 2); ?></p>
                         <p class="text-sm text-slate-500">Stock: <?php echo $row["stock"]; ?></p>
                         <p class="text-sm text-slate-500 mb-4">Seller: <?php echo htmlspecialchars($row["seller_name"]); ?></p>
 
-                        <div class="flex gap-2">
-                            <a href="product_details.php?id=<?php echo $row["id"]; ?>" class="w-1/2 text-center bg-indigo-500 text-white py-2 rounded-xl font-semibold">
+                        <div class="flex flex-col gap-2">
+                            <a href="product_details.php?id=<?php echo $row["id"]; ?>" class="w-full text-center bg-indigo-500 text-white py-2 rounded-xl font-semibold">
                                 Details
                             </a>
 
+                            <a href="?wishlist=<?php echo $row["id"]; ?>" class="w-full text-center bg-pink-500 text-white py-2 rounded-xl font-semibold">
+                                Add to Wishlist
+                            </a>
+
                             <?php if ($row["stock"] > 0) { ?>
-                                <a href="?add_to_cart=<?php echo $row["id"]; ?>" class="w-1/2 text-center bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 rounded-xl font-semibold">
+                                <a href="?add_to_cart=<?php echo $row["id"]; ?>" class="w-full text-center bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 rounded-xl font-semibold">
                                     Add to Cart
                                 </a>
                             <?php } else { ?>
-                                <button class="w-1/2 bg-gray-400 text-white py-2 rounded-xl cursor-not-allowed">Out of Stock</button>
+                                <button class="w-full bg-gray-400 text-white py-2 rounded-xl cursor-not-allowed">Out of Stock</button>
                             <?php } ?>
                         </div>
                     </div>
