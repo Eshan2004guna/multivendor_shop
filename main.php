@@ -1,130 +1,242 @@
 <?php
 session_start();
+include 'db.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: login.php");
-    exit();
+$message = "";
+$error = "";
+
+/* =========================
+   SESSION
+========================= */
+$user_id = $_SESSION['user_id'] ?? null;
+$user_name = $_SESSION['user_name'] ?? "Guest";
+$user_role = $_SESSION['user_role'] ?? "customer";
+
+/* =========================
+   SEARCH + FILTER
+========================= */
+$search = isset($_GET['search']) ? trim($_GET['search']) : "";
+$brand_filter = isset($_GET['brand']) ? trim($_GET['brand']) : "";
+
+/* =========================
+   ADD TO CART
+========================= */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
+
+    if (!$user_id) {
+        header("Location: login.php");
+        exit();
+    }
+
+    $product_id = (int)$_POST['product_id'];
+
+    $stmt = $conn->prepare("SELECT * FROM products WHERE id = ?");
+    $stmt->bind_param("i", $product_id);
+    $stmt->execute();
+    $product = $stmt->get_result()->fetch_assoc();
+
+    if ($product) {
+
+        if ($product['stock'] <= 0) {
+            $error = "Out of stock";
+        } else {
+
+            $check = $conn->prepare("SELECT * FROM cart_items WHERE user_id=? AND product_id=?");
+            $check->bind_param("ii", $user_id, $product_id);
+            $check->execute();
+            $cart = $check->get_result()->fetch_assoc();
+
+            if ($cart) {
+                $newQty = $cart['quantity'] + 1;
+
+                $update = $conn->prepare("UPDATE cart_items SET quantity=? WHERE id=?");
+                $update->bind_param("ii", $newQty, $cart['id']);
+                $update->execute();
+
+                $message = "Cart updated";
+            } else {
+                $insert = $conn->prepare("INSERT INTO cart_items (user_id, product_id, quantity, price) VALUES (?, ?, 1, ?)");
+                $insert->bind_param("iid", $user_id, $product_id, $product['price']);
+                $insert->execute();
+
+                $message = "Added to cart";
+            }
+        }
+    }
 }
 
-$full_name = $_SESSION["full_name"] ?? "User";
-$role = $_SESSION["role"] ?? "";
+/* =========================
+   ADD TO WISHLIST (FIXED)
+========================= */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_wishlist'])) {
+
+    if (!$user_id) {
+        header("Location: login.php");
+        exit();
+    }
+
+    $product_id = (int)$_POST['product_id'];
+
+    $check = $conn->prepare("SELECT id FROM wishlist WHERE user_id=? AND product_id=?");
+    $check->bind_param("ii", $user_id, $product_id);
+    $check->execute();
+    $exists = $check->get_result()->num_rows;
+
+    if ($exists > 0) {
+        $message = "Already in wishlist ❤️";
+    } else {
+        $insert = $conn->prepare("INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)");
+        $insert->bind_param("ii", $user_id, $product_id);
+
+        if ($insert->execute()) {
+            $message = "Added to wishlist ❤️";
+        } else {
+            $error = "Wishlist error: " . $conn->error;
+        }
+    }
+}
+
+/* =========================
+   FETCH BRANDS
+========================= */
+$brands = [];
+$bq = $conn->query("SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != ''");
+while ($b = $bq->fetch_assoc()) {
+    $brands[] = $b['brand'];
+}
+
+/* =========================
+   PRODUCT QUERY (SEARCH FIXED)
+========================= */
+$sql = "SELECT p.*, u.name AS seller_name
+        FROM products p
+        LEFT JOIN users u ON p.seller_id = u.id
+        WHERE 1=1";
+
+$params = [];
+$types = "";
+
+if ($search !== "") {
+    $sql .= " AND (p.name LIKE ? OR p.brand LIKE ? OR p.description LIKE ?)";
+    $s = "%$search%";
+    $params[] = $s;
+    $params[] = $s;
+    $params[] = $s;
+    $types .= "sss";
+}
+
+if ($brand_filter !== "") {
+    $sql .= " AND p.brand = ?";
+    $params[] = $brand_filter;
+    $types .= "s";
+}
+
+$sql .= " ORDER BY p.id DESC";
+
+$stmt = $conn->prepare($sql);
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
+
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Main Dashboard - Eshan HyperMart</title>
+    <title>MultiVendor Shop</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 min-h-screen">
 
-    <nav class="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-extrabold">ESHAN HYPERMART</h1>
-                <p class="text-sm text-white/90">Everything You Need, One Place.</p>
-            </div>
+<body class="bg-gray-100">
 
-            <div class="flex items-center gap-4">
-                <span class="hidden md:inline text-sm font-medium">
-                    Logged in as: <strong><?php echo htmlspecialchars($full_name); ?></strong>
-                </span>
+<!-- NAV -->
+<nav class="bg-indigo-700 text-white p-4 flex justify-between">
+    <h1 class="font-bold text-xl">MultiVendor Shop</h1>
 
-                <a href="profile.php" class="bg-white/20 px-4 py-2 rounded-xl font-semibold hover:bg-white/30 transition">
-                    Profile
-                </a>
-
-                <a href="logout.php" class="bg-red-500 px-4 py-2 rounded-xl font-semibold hover:bg-red-600 transition">
-                    Logout
-                </a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="max-w-6xl mx-auto px-6 py-10">
-        <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl p-8 mb-8 border border-white/40">
-            <h2 class="text-4xl font-extrabold text-slate-800 mb-2">
-                Welcome, <?php echo htmlspecialchars($full_name); ?> 👋
-            </h2>
-            <p class="text-lg text-slate-600">
-                Your role:
-                <span class="font-bold text-purple-600">
-                    <?php echo ucfirst(htmlspecialchars($role)); ?>
-                </span>
-            </p>
-        </div>
-
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-            <?php if ($role === "seller") { ?>
-                <a href="seller/add_product.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-green-400 to-emerald-600 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">Add Product</h3>
-                    <p>Add a new product to your store.</p>
-                </a>
-
-                <a href="seller/manage_products.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">Manage Products</h3>
-                    <p>Edit or delete your products.</p>
-                </a>
-
-                <a href="seller/orders.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-teal-500 to-cyan-600 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">View Orders</h3>
-                    <p>Check orders for your products.</p>
-                </a>
-            <?php } ?>
-
-            <?php if ($role === "customer") { ?>
-                <a href="customer/products.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">View Products</h3>
-                    <p>Browse all available products.</p>
-                </a>
-
-                <a href="customer/wishlist.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">My Wishlist</h3>
-                    <p>Save your favorite products.</p>
-                </a>
-
-                <a href="customer/cart.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">My Cart</h3>
-                    <p>View items in your cart.</p>
-                </a>
-
-                <a href="customer/checkout.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">Checkout</h3>
-                    <p>Complete your purchase.</p>
-                </a>
-
-                <a href="customer/orders.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">My Orders</h3>
-                    <p>See your order history.</p>
-                </a>
-            <?php } ?>
-
-            <?php if ($role === "admin") { ?>
-                <a href="admin/dashboard.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-indigo-500 to-blue-700 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">Admin Dashboard</h3>
-                    <p>Overview of system data.</p>
-                </a>
-
-                <a href="admin/manage_users.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-pink-500 to-rose-600 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">Manage Users</h3>
-                    <p>View and control users.</p>
-                </a>
-
-                <a href="admin/manage_products.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-slate-600 to-slate-800 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">Manage Products</h3>
-                    <p>Control all products.</p>
-                </a>
-
-                <a href="admin/manage_orders.php" class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:scale-105 transition">
-                    <h3 class="text-2xl font-bold mb-2">Manage Orders</h3>
-                    <p>Update order status.</p>
-                </a>
-            <?php } ?>
-
-        </div>
+    <div class="space-x-4">
+        <a href="main.php">Home</a>
+        <a href="cart.php">Cart</a>
+        <a href="wishlist.php">Wishlist</a>
+        <a href="logout.php">Logout</a>
     </div>
+</nav>
+
+<!-- SEARCH -->
+<div class="max-w-6xl mx-auto mt-6 bg-white p-4 rounded shadow">
+    <form method="GET" class="flex gap-2">
+
+        <input type="text" name="search"
+               value="<?php echo htmlspecialchars($search); ?>"
+               placeholder="Search products..."
+               class="w-full border p-2 rounded">
+
+        <select name="brand" class="border p-2 rounded">
+            <option value="">All Brands</option>
+            <?php foreach ($brands as $b): ?>
+                <option value="<?php echo $b; ?>" <?php if ($brand_filter==$b) echo 'selected'; ?>>
+                    <?php echo $b; ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <button class="bg-indigo-600 text-white px-4 rounded">Search</button>
+    </form>
+</div>
+
+<!-- MESSAGE -->
+<div class="max-w-6xl mx-auto mt-4">
+    <?php if ($message): ?>
+        <div class="bg-green-200 p-2 rounded"><?php echo $message; ?></div>
+    <?php endif; ?>
+    <?php if ($error): ?>
+        <div class="bg-red-200 p-2 rounded"><?php echo $error; ?></div>
+    <?php endif; ?>
+</div>
+
+<!-- PRODUCTS -->
+<div class="max-w-6xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+
+<?php while ($row = $result->fetch_assoc()): ?>
+    <?php $img = !empty($row['image']) ? "uploads/".$row['image'] : "https://via.placeholder.com/300"; ?>
+
+    <div class="bg-white p-4 rounded shadow">
+
+        <img src="<?php echo $img; ?>" class="h-40 w-full object-cover rounded">
+
+        <h2 class="font-bold mt-2"><?php echo $row['name']; ?></h2>
+        <p>Rs. <?php echo $row['price']; ?></p>
+        <p class="text-sm text-gray-500">Seller: <?php echo $row['seller_name']; ?></p>
+
+        <a href="product_details.php?id=<?php echo $row['id']; ?>"
+           class="block bg-blue-600 text-white text-center p-2 mt-2 rounded">
+           View
+        </a>
+
+        <!-- CART -->
+        <form method="POST">
+            <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+            <button name="add_to_cart"
+                    class="w-full bg-green-500 text-white p-2 mt-2 rounded">
+                Add Cart
+            </button>
+        </form>
+
+        <!-- WISHLIST -->
+        <form method="POST">
+            <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+            <button name="add_to_wishlist"
+                    class="w-full bg-pink-500 text-white p-2 mt-2 rounded">
+                Wishlist
+            </button>
+        </form>
+
+    </div>
+<?php endwhile; ?>
+
+</div>
 
 </body>
 </html>
