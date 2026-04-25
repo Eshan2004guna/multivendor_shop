@@ -4,7 +4,7 @@ require_once "../db.php";
 
 $seller_id = $_SESSION["user_id"];
 
-// HANDLE STATUS UPDATE
+// UPDATE STATUS
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $order_id = intval($_POST["order_id"]);
     $status = $_POST["status"];
@@ -70,7 +70,9 @@ $result = $stmt->get_result();
                     <option <?php if($row["status"]=="Delivered") echo "selected"; ?>>Delivered</option>
                 </select>
 
-                <button class="bg-blue-500 text-white px-4 py-2 rounded">Update</button>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
+                    Update
+                </button>
             </form>
 
         </div>
