@@ -41,7 +41,7 @@ $role = $_SESSION["role"] ?? "";
     <!-- MAIN CONTENT -->
     <div class="max-w-6xl mx-auto px-6 py-10">
 
-        <!-- WELCOME CARD -->
+        <!-- WELCOME -->
         <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl p-8 mb-8 border border-white/40">
             <h2 class="text-4xl font-extrabold text-slate-800 mb-2">
                 Welcome, <?php echo htmlspecialchars($full_name); ?> 👋
@@ -69,10 +69,10 @@ $role = $_SESSION["role"] ?? "";
                 <a href="seller/manage_products.php"
                    class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:scale-105 transition">
                     <h3 class="text-2xl font-bold mb-2">Manage Products</h3>
-                    <p>View and manage your products.</p>
+                    <p>View and manage your product list.</p>
                 </a>
 
-                <!-- ✅ NEW: VIEW ORDERS -->
+                <!-- ✅ THIS WAS MISSING -->
                 <a href="seller/orders.php"
                    class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-105 transition">
                     <h3 class="text-2xl font-bold mb-2">View Orders</h3>
