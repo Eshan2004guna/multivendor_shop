@@ -7,7 +7,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 $full_name = $_SESSION["full_name"] ?? "User";
-$role = $_SESSION["role"] ?? "";
+$role = strtolower($_SESSION["role"] ?? ""); // 🔥 FIX: normalize role
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -49,12 +49,12 @@ $role = $_SESSION["role"] ?? "";
             <p class="text-lg text-slate-600">
                 Your role:
                 <span class="font-bold text-purple-600">
-                    <?php echo ucfirst(htmlspecialchars($role)); ?>
+                    <?php echo ucfirst($role); ?>
                 </span>
             </p>
         </div>
 
-        <!-- DASHBOARD CARDS -->
+        <!-- DASHBOARD -->
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 
             <!-- SELLER -->
@@ -72,7 +72,7 @@ $role = $_SESSION["role"] ?? "";
                     <p>View and manage your product list.</p>
                 </a>
 
-                <!-- ✅ THIS WAS MISSING -->
+                <!-- ✅ IMPORTANT: VIEW ORDERS -->
                 <a href="seller/orders.php"
                    class="rounded-3xl p-6 text-white shadow-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-105 transition">
                     <h3 class="text-2xl font-bold mb-2">View Orders</h3>
